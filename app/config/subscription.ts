@@ -1,0 +1,1 @@
+export const hasActiveSubscription = true;
