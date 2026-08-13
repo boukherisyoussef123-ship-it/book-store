@@ -14,8 +14,40 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Book Store",
-  description: "Digital Library",
+  title: {
+    default: "Book Store - Digital Library for Kids",
+    template: "%s | Book Store",
+  },
+
+  description:
+    "Discover a digital library of educational books, stories, activities, animals, and coloring books for kids.",
+
+  keywords: [
+    "kids books",
+    "children books",
+    "digital library",
+    "educational books",
+    "kids stories",
+    "activity books",
+    "coloring books",
+  ],
+
+  authors: [{ name: "Book Store" }],
+  creator: "Book Store",
+
+  openGraph: {
+    title: "Book Store - Digital Library for Kids",
+    description:
+      "Discover educational books, stories, activities, and coloring books for kids.",
+    type: "website",
+    locale: "en_US",
+    siteName: "Book Store",
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
