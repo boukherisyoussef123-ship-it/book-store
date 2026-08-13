@@ -14,6 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    "https://book-store-ashy-nine.vercel.app"
+  ),
+
   title: {
     default: "Book Store - Digital Library for Kids",
     template: "%s | Book Store",
@@ -30,6 +34,10 @@ export const metadata: Metadata = {
     "kids stories",
     "activity books",
     "coloring books",
+    "kids reading",
+    "كتب أطفال",
+    "مكتبة رقمية",
+    "كتب تعليمية للأطفال",
   ],
 
   authors: [{ name: "Book Store" }],
@@ -39,9 +47,10 @@ export const metadata: Metadata = {
     title: "Book Store - Digital Library for Kids",
     description:
       "Discover educational books, stories, activities, and coloring books for kids.",
-    type: "website",
-    locale: "en_US",
+    url: "https://book-store-ashy-nine.vercel.app",
     siteName: "Book Store",
+    locale: "en_US",
+    type: "website",
   },
 
   robots: {
