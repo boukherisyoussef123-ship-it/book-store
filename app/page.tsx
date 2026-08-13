@@ -1,4 +1,4 @@
-import Link from "next/link";
+[import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import Footer from "./components/Footer";
 import Newsletter from "./components/Newsletter";
@@ -47,4 +47,4 @@ export default function Home() {
       <Footer />
     </main>
   );
-}
+}]

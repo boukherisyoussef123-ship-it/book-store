@@ -1,10 +1,14 @@
 "use client";
-
+import { createClient } from "@supabase/supabase-js";
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import imageCompression from "browser-image-compression";
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 export default function AddBookPage() {
   console.log("ADD BOOK PAGE LOADED");
 
@@ -109,164 +113,308 @@ async function compressImage(
     return null;
   }
 } 
+
+async function uploadDirect(
+  bucket: "covers" | "books" | "previews",
+  file: File,
+  path: string
+) {
+  console.log("🔥 REQUEST SIGNED URL:", bucket, path);
+
+  const response = await fetch("/api/books/upload-url", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      bucket,
+      path,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error || "Failed to create upload URL"
+    );
+  }
+
+  console.log(
+    "🔥 UPLOADING DIRECTLY TO SUPABASE:",
+    bucket,
+    path
+  );
+
+  const { error } = await supabase.storage
+    .from(bucket)
+    .uploadToSignedUrl(
+      path,
+      data.token,
+      file
+    );
+
+  if (error) {
+    console.error(
+      "🔥 SUPABASE DIRECT UPLOAD ERROR:",
+      error
+    );
+
+    throw error;
+  }
+
+  console.log(
+    "✅ SUPABASE UPLOAD SUCCESS:",
+    bucket,
+    path
+  );
+
+  if (
+    bucket === "covers" ||
+    bucket === "previews"
+  ) {
+    const { data: publicData } =
+      supabase.storage
+        .from(bucket)
+        .getPublicUrl(path);
+
+    return publicData.publicUrl;
+  }
+
+  return path;
+}
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!coverFile) {
-      alert("❌ Please select a cover image");
-      return;
-    }
+  if (!coverFile) {
+    alert("❌ Please select a cover image");
+    return;
+  }
 
-    if (!pdfFile) {
-      alert("❌ Please select a PDF file");
-      return;
-    }
+  if (!pdfFile) {
+    alert("❌ Please select a PDF file");
+    return;
+  }
 
-    if (!title.trim()) {
-      alert("❌ Please enter the book title");
-      return;
-    }
+  if (!title.trim()) {
+    alert("❌ Please enter the book title");
+    return;
+  }
 
-    const slug = title
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-");
+  const slug = title
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-_]/g, "");
 
-    const formData = new FormData();
+  if (!slug) {
+    alert("❌ Invalid book title");
+    return;
+  }
 
-    formData.append("slug", slug);
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("category", category);
-    formData.append("pages", pages.toString());
+  try {
+    console.log("================================");
+    console.log("🔥 START DIRECT BOOK UPLOAD");
+    console.log("Slug:", slug);
+    console.log("================================");
 
-    formData.append("cover", coverFile);
-    formData.append("pdf", pdfFile);
+    // =========================
+    // COVER
+    // =========================
+
+    console.log("🔥 START COVER UPLOAD");
+
+    const coverPath = `${slug}/cover.webp`;
+
+    const coverUrl = await uploadDirect(
+      "covers",
+      coverFile,
+      coverPath
+    );
+
+    console.log(
+      "✅ COVER URL:",
+      coverUrl
+    );
+
+    // =========================
+    // PDF
+    // =========================
+
+    console.log("🔥 START PDF UPLOAD");
+
+    console.log(
+      "PDF size:",
+      (pdfFile.size / 1024 / 1024).toFixed(2),
+      "MB"
+    );
+
+    const pdfPath = `${slug}/book.pdf`;
+
+    await uploadDirect(
+      "books",
+      pdfFile,
+      pdfPath
+    );
+
+    console.log(
+      "✅ PDF UPLOAD SUCCESS:",
+      pdfPath
+    );
+
+    // =========================
+    // PREVIEWS
+    // =========================
+
+    let preview1Url: string | null = null;
+    let preview2Url: string | null = null;
+    let preview3Url: string | null = null;
+    let preview4Url: string | null = null;
 
     if (preview1) {
-      formData.append("preview1", preview1);
+      console.log(
+        "🔥 START PREVIEW 1 UPLOAD"
+      );
+
+      preview1Url = await uploadDirect(
+        "previews",
+        preview1,
+        `${slug}/preview1.jpg`
+      );
     }
 
     if (preview2) {
-      formData.append("preview2", preview2);
+      console.log(
+        "🔥 START PREVIEW 2 UPLOAD"
+      );
+
+      preview2Url = await uploadDirect(
+        "previews",
+        preview2,
+        `${slug}/preview2.jpg`
+      );
     }
 
     if (preview3) {
-      formData.append("preview3", preview3);
+      console.log(
+        "🔥 START PREVIEW 3 UPLOAD"
+      );
+
+      preview3Url = await uploadDirect(
+        "previews",
+        preview3,
+        `${slug}/preview3.jpg`
+      );
     }
 
     if (preview4) {
-      formData.append("preview4", preview4);
-    }
-
-    console.log("===== FORMDATA =====");
-
-    for (const [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        console.log(
-          key,
-          value.name,
-          `${(value.size / 1024).toFixed(0)} KB`
-        );
-      } else {
-        console.log(key, value);
-      }
-    }
-
-    console.log("========== FILE SIZES ==========");
-
-console.log(
-  "Cover:",
-  coverFile
-    ? `${(coverFile.size / 1024).toFixed(0)} KB`
-    : "NONE"
-);
-
-console.log(
-  "PDF:",
-  pdfFile
-    ? `${(pdfFile.size / 1024 / 1024).toFixed(2)} MB`
-    : "NONE"
-);
-
-console.log(
-  "Preview 1:",
-  preview1
-    ? `${(preview1.size / 1024).toFixed(0)} KB`
-    : "NONE"
-);
-
-console.log(
-  "Preview 2:",
-  preview2
-    ? `${(preview2.size / 1024).toFixed(0)} KB`
-    : "NONE"
-);
-
-console.log(
-  "Preview 3:",
-  preview3
-    ? `${(preview3.size / 1024).toFixed(0)} KB`
-    : "NONE"
-);
-
-console.log(
-  "Preview 4:",
-  preview4
-    ? `${(preview4.size / 1024).toFixed(0)} KB`
-    : "NONE"
-);
-
-console.log("================================");
-
-    try {
-      const response = await fetch("/api/books", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json().catch(() => null);
-
       console.log(
-  "🔥 API RESPONSE =",
-  JSON.stringify(data, null, 2)
-);
+        "🔥 START PREVIEW 4 UPLOAD"
+      );
 
-      if (response.ok) {
-        alert("✅ Book added successfully");
-
-        setTitle("");
-        setDescription("");
-        setCategory("Education");
-        setPages(15);
-
-        setCoverFile(null);
-        setPdfFile(null);
-
-        setPreview1(null);
-        setPreview2(null);
-        setPreview3(null);
-        setPreview4(null);
-
-        setCoverPreview(null);
-      } else {
-        console.error(
-  "🔥 ADD BOOK ERROR =",
-  JSON.stringify(data, null, 2)
-);
-
-        alert(
-          `❌ Failed to add book\n${
-            data?.error || "Unknown server error"
-          }`
-        );
-      }
-    } catch (error) {
-      console.error("FETCH ERROR =", error);
-
-      alert("❌ Could not connect to the server");
+      preview4Url = await uploadDirect(
+        "previews",
+        preview4,
+        `${slug}/preview4.jpg`
+      );
     }
+
+    // =========================
+    // DATABASE
+    // =========================
+
+    console.log(
+      "🔥 START DATABASE CREATE"
+    );
+
+    const response = await fetch(
+      "/api/books",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          slug,
+          title,
+          description,
+          category,
+          pages,
+
+          cover: coverUrl,
+          pdf: pdfPath,
+
+          preview1: preview1Url,
+          preview2: preview2Url,
+          preview3: preview3Url,
+          preview4: preview4Url,
+        }),
+      }
+    );
+
+    const data = await response
+      .json()
+      .catch(() => null);
+
+    console.log(
+      "🔥 DATABASE RESPONSE:",
+      JSON.stringify(
+        data,
+        null,
+        2
+      )
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+          "Failed to create book"
+      );
+    }
+
+    // =========================
+    // SUCCESS
+    // =========================
+
+    console.log(
+      "🎉 BOOK CREATED SUCCESSFULLY"
+    );
+
+    alert(
+      "✅ Book added successfully"
+    );
+
+    setTitle("");
+    setDescription("");
+    setCategory("Education");
+    setPages(15);
+
+    setCoverFile(null);
+    setPdfFile(null);
+
+    setPreview1(null);
+    setPreview2(null);
+    setPreview3(null);
+    setPreview4(null);
+
+    setCoverPreview(null);
+
+  } catch (error) {
+    console.error(
+      "🔥 ADD BOOK ERROR:",
+      error
+    );
+
+    alert(
+      `❌ Failed to add book\n${
+        error instanceof Error
+          ? error.message
+          : "Unknown error"
+      }`
+    );
   }
+}
 
   return (
     <main className="min-h-screen bg-gray-50 p-6">

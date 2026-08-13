@@ -3,22 +3,28 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   const body = await req.json();
 
-  console.log("BODY =", body);
-
   const { email, password } = body;
 
-  console.log("EMAIL =", email);
-  console.log("PASSWORD =", password);
-
-  if (
-    email === "admin@bookstore.com" &&
-    password === "123456"
+    if (
+   email === process.env.ADMIN_EMAIL &&
+  password === process.env.ADMIN_PASSWORD
   ) {
     console.log("LOGIN OK");
 
-    return NextResponse.json({
-      success: true,
-    });
+    const response = NextResponse.json({
+  success: true,
+});
+
+response.cookies.set("admin_token", "logged", {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: true,
+  path: "/",
+  maxAge: 60 * 60 * 24,
+});
+
+return response;
+
   }
 
   console.log("LOGIN FAILED");

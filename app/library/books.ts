@@ -158,7 +158,7 @@ export const books: Book[] = [
    slug: "botanical-compendium",
   title: "Botanical Compendium",
   cover: "/covers/Botanical_Compendium.png",
-  pdf: "/books/Botanical_Compendium a.pdf",
+  pdf: "/books/Botanical_Compendium.pdf",
   description:
     "An educational collection of botanical knowledge featuring detailed illustrations and information about remarkable plant species.",
   folder: "botanical-compendium",
@@ -273,4 +273,4 @@ export const books: Book[] = [
   category: "Education",
 },
 
-];
+]
